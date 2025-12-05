@@ -1,0 +1,69 @@
+@import "tailwindcss";
+
+
+@layer base {
+  :root {
+    --background: 40 30% 96%;
+    --foreground: 30 20% 15%;
+    --card: 40 25% 92%;
+    --card-foreground: 30 20% 15%;
+    --popover: 40 30% 96%;
+    --popover-foreground: 30 20% 15%;
+    --primary: 150 35% 25%;
+    --primary-foreground: 40 30% 96%;
+    --secondary: 40 35% 88%;
+    --secondary-foreground: 30 20% 20%;
+    --muted: 40 20% 90%;
+    --muted-foreground: 30 15% 45%;
+    --accent: 42 75% 55%;
+    --accent-foreground: 30 20% 15%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 40 25% 82%;
+    --input: 40 25% 82%;
+    --ring: 150 35% 25%;
+    --radius: 0.5rem;
+    --book-cover: 150 35% 22%;
+    --book-cover-dark: 150 40% 15%;
+    --book-spine: 150 40% 18%;
+    --book-pages: 40 30% 94%;
+    --book-page-edge: 40 20% 85%;
+    --gold: 42 75% 55%;
+    --gold-light: 42 80% 70%;
+    --parchment: 40 35% 92%;
+    --leather: 25 40% 25%;
+    --gradient-book: linear-gradient(135deg, hsl(var(--book-cover)) 0%, hsl(var(--book-cover-dark)) 100%);
+    --gradient-gold: linear-gradient(135deg, hsl(var(--gold)) 0%, hsl(var(--gold-light)) 50%, hsl(var(--gold)) 100%);
+    --gradient-parchment: linear-gradient(180deg, hsl(var(--parchment)) 0%, hsl(40 30% 88%) 100%);
+    --shadow-book: 0 25px 50px -12px rgba(30, 20, 15, 0.4);
+    --shadow-page: 2px 0 8px rgba(30, 20, 15, 0.15);
+    --shadow-glow: 0 0 40px rgba(180, 140, 60, 0.3);
+  }
+}
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #ebebeb;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+
