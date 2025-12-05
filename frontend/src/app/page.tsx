@@ -26,7 +26,7 @@ export default function Home() {
           <Link href="/livros" className="px-8 py-4 bg-green-900 text-primary-foreground rounded-lg font-display text-lg
                               hover:bg-green-900/90 transition-all duration-300 flex items-center justify-center gap-2
                               shadow-lg hover:shadow-xl hover:-translate-y-0.5"><SearchIcon className="mr-2"/>Explorar Catálogo</Link>
-          <Link href="/livros" className="px-8 py-4 bg-neutral-200 text-black rounded-lg font-display text-lg
+          <Link href="/cadastro" className="px-8 py-4 bg-neutral-200 text-black rounded-lg font-display text-lg
                               hover:bg-orange-400/70 transition-all duration-300 flex items-center justify-center gap-2
                               shadow-lg hover:shadow-xl hover:-translate-y-0.5"><Users className="w-5 h-5"/>Criar Conta</Link>
         </div>

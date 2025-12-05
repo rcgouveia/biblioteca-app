@@ -9,9 +9,9 @@ interface BookAnimationProps {
 const NUM_PAGES = 5;
 const PAGE_ROTATION_BASE = -155;
 const PAGE_ROTATION_STEP = 1;
-const PAGE_DELAY_BASE = 0.4;
+const PAGE_DELAY_BASE = 0;
 const PAGE_DELAY_STEP = 0.08;
-const PAGE_TRANSITION_DURATION = 0.5;
+const PAGE_TRANSITION_DURATION = 0.1;
 
 // --- VARIANTS DE ANIMAÇÃO (Estrutura Limpa) ---
 const coverVariants = {

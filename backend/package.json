@@ -1,6 +1,7 @@
 {
   "dependencies": {
     "@prisma/client": "^6.16.3",
+    "cors": "^2.8.5",
     "dotenv": "^17.2.3",
     "express": "^5.1.0",
     "swagger-jsdoc": "^6.2.8",
@@ -8,6 +9,7 @@
     "zod": "^4.1.11"
   },
   "devDependencies": {
+    "@types/cors": "^2.8.19",
     "@types/express": "^5.0.3",
     "@types/node": "^24.6.2",
     "@types/swagger-jsdoc": "^6.0.4",
