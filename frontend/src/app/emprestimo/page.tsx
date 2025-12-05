@@ -2,33 +2,38 @@
 
 import React, { useState, useEffect, FormEvent } from 'react';
 import axios, { AxiosError } from 'axios';
-import api from '../lib/api'; // Instância configurada do Axios
+import api from '../lib/api';
 import NavBar from '../components/NavBar/NavBar';
-import styles from './Emprestimos.module.css'; // Crie um arquivo CSS similar para estilos
 
-// 1. Interfaces (assumindo campos comuns para Emprestimo, ajuste conforme o modelo Prisma)
 interface Emprestimo {
   id: number;
   clienteId: number;
-  livroId: number;
-  dataEmprestimo: string; // DateTime como string (ISO)
-  dataDevolucao?: string; // Opcional, para devolução
-  status: string; // Ex: "ativo", "devolvido"
-  // Adicione campos extras se houver, como createdAt, updatedAt
-}
-
-interface EmprestimoForm {
-  clienteId: number;
-  livroId: number;
+  clienteNome?: string;
+  clienteCpf?: string;
+  livrosId: number; // plural
+  livroTitulo?: string;
+  bibliotecarioId?: number;
+  codEmprestimo?: number;
   dataEmprestimo: string;
   dataDevolucao?: string;
   status: string;
 }
 
-// Interfaces auxiliares para dropdowns (buscar clientes e livros)
+interface EmprestimoForm {
+  clienteId: number;
+  clienteCpf: string;
+  livrosId: number;
+  bibliotecarioId: number;
+  codEmprestimo?: number;
+  dataEmprestimo: string;
+  dataDevolucao?: string;
+  status: string;
+}
+
 interface Cliente {
   id: number;
-  nome: string; // Assumindo que Cliente tem 'nome'
+  nome: string;
+  cpf: string;
 }
 
 interface Livro {
@@ -36,50 +41,38 @@ interface Livro {
   titulo: string;
 }
 
-// Utilitário para checar erro Axios
 function isAxiosErrorWithResponse(error: unknown): error is AxiosError & { response: { data: { message: string } } } {
   return axios.isAxiosError(error) && !!error.response && !!(error.response.data as any).message;
 }
 
 const Emprestimos: React.FC = () => {
   const [emprestimos, setEmprestimos] = useState<Emprestimo[]>([]);
-  const [clientes, setClientes] = useState<Cliente[]>([]); // Para dropdown de clientes
-  const [livros, setLivros] = useState<Livro[]>([]); // Para dropdown de livros
+  const [clientes, setClientes] = useState<Cliente[]>([]);
+  const [livros, setLivros] = useState<Livro[]>([]);
   const [formData, setFormData] = useState<EmprestimoForm>({
     clienteId: 0,
-    livroId: 0,
-    dataEmprestimo: new Date().toISOString().split('T')[0], // Data atual no formato YYYY-MM-DD
+    clienteCpf: '',
+    livrosId: 0,
+    bibliotecarioId: 3,
+    codEmprestimo: undefined,
+    dataEmprestimo: new Date().toISOString().split('T')[0],
     dataDevolucao: '',
     status: 'ativo',
   });
   const [editingId, setEditingId] = useState<number | null>(null);
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(false);
+  const [cpfFiltro, setCpfFiltro] = useState<string>('');
 
-  // 2. Buscar empréstimos, clientes e livros
-  const fetchEmprestimos = async () => {
-    try {
-      const response = await api.get('/emprestimos/listar'); // Assumindo endpoint GET /emprestimos
-      console.log('Empréstimos recebidos:', response.data);
-      if (Array.isArray(response.data)) {
-        setEmprestimos(response.data);
-      } else {
-        setEmprestimos([]);
-        setMessage('Erro: Dados dos empréstimos não são válidos.');
-      }
-    } catch (error) {
-      console.error('Erro ao buscar empréstimos:', error);
-      setMessage('Erro ao carregar empréstimos.');
-      setEmprestimos([]);
-    }
-  };
+  useEffect(() => {
+    fetchClientes();
+    fetchLivros();
+  }, []);
 
   const fetchClientes = async () => {
     try {
-      const response = await api.get('/clientes/listar'); // Assumindo endpoint GET /clientes
-      if (Array.isArray(response.data)) {
-        setClientes(response.data);
-      }
+      const response = await api.get('/clientes/listar');
+      if (Array.isArray(response.data)) setClientes(response.data);
     } catch (error) {
       console.error('Erro ao buscar clientes:', error);
     }
@@ -87,197 +80,217 @@ const Emprestimos: React.FC = () => {
 
   const fetchLivros = async () => {
     try {
-      const response = await api.get('/livros/listar'); // Assumindo endpoint GET /livros
-      if (Array.isArray(response.data)) {
-        setLivros(response.data);
-      }
+      const response = await api.get('/livro/listar');
+      if (Array.isArray(response.data)) setLivros(response.data);
     } catch (error) {
       console.error('Erro ao buscar livros:', error);
     }
   };
 
-  useEffect(() => {
-    fetchEmprestimos();
-    fetchClientes();
-    fetchLivros();
-  }, []);
+  const fetchEmprestimosPorCpf = async () => {
+    if (!cpfFiltro) {
+      setMessage('Digite um CPF para buscar.');
+      return;
+    }
+    try {
+      setLoading(true);
+      setMessage('');
+      const response = await api.get(`/emprestimo/listar/${cpfFiltro}`);
+      if (Array.isArray(response.data)) {
+        setEmprestimos(response.data);
+        if (response.data.length === 0) setMessage('Nenhum empréstimo encontrado para este CPF.');
+      } else {
+        setEmprestimos([]);
+        setMessage('Dados inválidos do backend.');
+      }
+    } catch (error) {
+      console.error(error);
+      setMessage('Erro ao buscar empréstimos por CPF.');
+      setEmprestimos([]);
+    } finally {
+      setLoading(false);
+    }
+  };
 
-  // 3. Manipular mudanças no formulário
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({
+  const handleClienteChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const clienteId = parseInt(e.target.value) || 0;
+    const clienteSelecionado = clientes.find(c => c.id === clienteId);
+    setFormData(prev => ({
       ...prev,
-      [name]: name === 'clienteId' || name === 'livroId' ? parseInt(value) || 0 : value,
+      clienteId,
+      clienteCpf: clienteSelecionado ? clienteSelecionado.cpf : ''
     }));
   };
 
-  // 4. Submeter formulário (criar ou atualizar)
+  const handleLivroChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setFormData(prev => ({ ...prev, livrosId: parseInt(e.target.value) || 0 }));
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({ ...prev, [name]: value }));
+  };
+
   const handleSubmit = async (e: FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     setLoading(true);
     setMessage('');
 
     try {
+      if (!editingId && !formData.codEmprestimo) {
+        formData.codEmprestimo = Math.floor(100 + Math.random() * 900);
+      }
+
       if (editingId) {
-        await api.put(`/emprestimos/atualizar/${editingId}`, formData); // PUT /emprestimos/:id
+        await api.put(`/emprestimo/atualizar/${editingId}`, formData);
         setMessage('Empréstimo atualizado com sucesso!');
       } else {
-        await api.post('/emprestimos/criar', formData); // POST /emprestimos
+        await api.post('/emprestimo/criar', formData);
         setMessage('Empréstimo criado com sucesso!');
       }
 
-      setFormData({ clienteId: 0, livroId: 0, dataEmprestimo: new Date().toISOString().split('T')[0], dataDevolucao: '', status: 'ativo' });
+      setFormData({
+        clienteId: 0,
+        clienteCpf: '',
+        livrosId: 0,
+        bibliotecarioId: 3,
+        codEmprestimo: undefined,
+        dataEmprestimo: new Date().toISOString().split('T')[0],
+        dataDevolucao: '',
+        status: 'ativo',
+      });
       setEditingId(null);
-      fetchEmprestimos();
+      setCpfFiltro('');
+      setEmprestimos([]);
     } catch (error) {
       let errorMessage = 'Erro ao salvar empréstimo.';
-      if (isAxiosErrorWithResponse(error)) {
-        errorMessage = error.response.data.message;
-      }
+      if (isAxiosErrorWithResponse(error)) errorMessage = error.response.data.message;
       setMessage(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
-  // 5. Deletar empréstimo
   const handleDelete = async (id: number) => {
-    if (!window.confirm('Tem certeza que deseja deletar este empréstimo?')) return;
-
+    if (!window.confirm('Deseja realmente deletar este empréstimo?')) return;
     try {
-      await api.delete(`/emprestimos/deletar/${id}`); // DELETE /emprestimos/:id
+      await api.delete(`/emprestimo/deletar/${id}`);
+      setEmprestimos(prev => prev.filter(e => e.id !== id));
       setMessage('Empréstimo deletado com sucesso!');
-      fetchEmprestimos();
     } catch (error) {
       let errorMessage = 'Erro ao deletar empréstimo.';
-      if (isAxiosErrorWithResponse(error)) {
-        errorMessage = error.response.data.message;
-      }
+      if (isAxiosErrorWithResponse(error)) errorMessage = error.response.data.message;
       setMessage(errorMessage);
     }
   };
 
-  // 6. Iniciar edição
   const handleEdit = (emprestimo: Emprestimo) => {
     setFormData({
       clienteId: emprestimo.clienteId,
-      livroId: emprestimo.livroId,
-      dataEmprestimo: emprestimo.dataEmprestimo.split('T')[0], // Formato YYYY-MM-DD
+      clienteCpf: emprestimo.clienteCpf || '',
+      livrosId: emprestimo.livrosId,
+      bibliotecarioId: emprestimo.bibliotecarioId || 3,
+      codEmprestimo: emprestimo.codEmprestimo,
+      dataEmprestimo: emprestimo.dataEmprestimo.split('T')[0],
       dataDevolucao: emprestimo.dataDevolucao ? emprestimo.dataDevolucao.split('T')[0] : '',
-      status: emprestimo.status,
+      status: emprestimo.status
     });
     setEditingId(emprestimo.id);
   };
 
-  // 7. Cancelar edição
   const handleCancelEdit = () => {
-    setFormData({ clienteId: 0, livroId: 0, dataEmprestimo: new Date().toISOString().split('T')[0], dataDevolucao: '', status: 'ativo' });
+    setFormData({
+      clienteId: 0,
+      clienteCpf: '',
+      livrosId: 0,
+      bibliotecarioId: 3,
+      codEmprestimo: undefined,
+      dataEmprestimo: new Date().toISOString().split('T')[0],
+      dataDevolucao: '',
+      status: 'ativo'
+    });
     setEditingId(null);
   };
 
   return (
-    <div className='bg-black'>
+    <div className="min-h-screen bg-white text-gray-800">
       <NavBar />
-      <div className={styles.container}>
-        <h2>Gerenciamento de Empréstimos</h2>
+      <div className="max-w-5xl mx-auto p-6">
+        <h2 className="text-2xl font-bold mb-6">Gerenciamento de Empréstimos</h2>
 
-        {/* Formulário para Criar/Editar */}
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <h3>{editingId ? 'Editar Empréstimo' : 'Criar Novo Empréstimo'}</h3>
+        <form onSubmit={handleSubmit} className="bg-gray-50 p-6 rounded shadow-md mb-6 space-y-4">
+          <h3 className="text-xl font-semibold">{editingId ? 'Editar Empréstimo' : 'Criar Novo Empréstimo'}</h3>
 
-          <label htmlFor="clienteId">Cliente:</label>
-          <select
-            id="clienteId"
-            name="clienteId"
-            value={formData.clienteId}
-            onChange={handleChange}
-            required
-          >
-            <option value={0}>Selecione um cliente</option>
-            {clientes.map((cliente) => (
-              <option key={cliente.id} value={cliente.id}>
-                {cliente.nome}
-              </option>
-            ))}
-          </select>
+          <div className="flex flex-col md:flex-row md:space-x-4">
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Cliente:</label>
+              <select className="w-full border rounded p-2" value={formData.clienteId} onChange={handleClienteChange} required>
+                <option value={0}>Selecione um cliente</option>
+                {clientes.map(c => <option key={c.id} value={c.id}>{c.nome}</option>)}
+              </select>
+            </div>
 
-          <label htmlFor="livroId">Livro:</label>
-          <select
-            id="livroId"
-            name="livroId"
-            value={formData.livroId}
-            onChange={handleChange}
-            required
-          >
-            <option value={0}>Selecione um livro</option>
-            {livros.map((livro) => (
-              <option key={livro.id} value={livro.id}>
-                {livro.titulo}
-              </option>
-            ))}
-          </select>
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Livro:</label>
+              <select className="w-full border rounded p-2" value={formData.livrosId} onChange={handleLivroChange} required>
+                <option value={0}>Selecione um livro</option>
+                {livros.map(l => <option key={l.id} value={l.id}>{l.titulo}</option>)}
+              </select>
+            </div>
+          </div>
 
-          <label htmlFor="dataEmprestimo">Data de Empréstimo:</label>
-          <input
-            id="dataEmprestimo"
-            type="date"
-            name="dataEmprestimo"
-            value={formData.dataEmprestimo}
-            onChange={handleChange}
-            required
-          />
+          <div className="flex flex-col md:flex-row md:space-x-4">
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Data de Empréstimo:</label>
+              <input type="date" className="w-full border rounded p-2" name="dataEmprestimo" value={formData.dataEmprestimo} onChange={handleChange} required />
+            </div>
 
-          <label htmlFor="dataDevolucao">Data de Devolução (opcional):</label>
-          <input
-            id="dataDevolucao"
-            type="date"
-            name="dataDevolucao"
-            value={formData.dataDevolucao}
-            onChange={handleChange}
-          />
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Data de Devolução:</label>
+              <input type="date" className="w-full border rounded p-2" name="dataDevolucao" value={formData.dataDevolucao} onChange={handleChange} />
+            </div>
 
-          <label htmlFor="status">Status:</label>
-          <select
-            id="status"
-            name="status"
-            value={formData.status}
-            onChange={handleChange}
-            required
-          >
-            <option value="ativo">Ativo</option>
-            <option value="devolvido">Devolvido</option>
-          </select>
+            <div className="flex-1">
+              <label className="block mb-1 font-medium">Status:</label>
+              <select className="w-full border rounded p-2" name="status" value={formData.status} onChange={handleChange} required>
+                <option value="ativo">Ativo</option>
+                <option value="devolvido">Devolvido</option>
+              </select>
+            </div>
+          </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
-          </button>
-          {editingId && (
-            <button type="button" onClick={handleCancelEdit} className={styles.cancelBtn}>
-              Cancelar
+          <div className="flex space-x-2 mt-4">
+            <button type="submit" disabled={loading} className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
             </button>
-          )}
+            {editingId && (
+              <button type="button" onClick={handleCancelEdit} className="bg-gray-400 text-white px-4 py-2 rounded hover:bg-gray-500">Cancelar</button>
+            )}
+          </div>
         </form>
 
-        {/* Lista de Empréstimos */}
-        <div className={styles.list}>
-          <h3>Lista de Empréstimos</h3>
-          {!Array.isArray(emprestimos) || emprestimos.length === 0 ? (
-            <p>{!Array.isArray(emprestimos) ? 'Erro: Dados inválidos.' : 'Nenhum empréstimo encontrado.'}</p>
+        <div className="mb-6 flex items-center space-x-2">
+          <input type="text" placeholder="Filtrar por CPF" className="border rounded p-2 flex-1" value={cpfFiltro} onChange={e => setCpfFiltro(e.target.value)} />
+          <button onClick={fetchEmprestimosPorCpf} className="bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700">Buscar</button>
+        </div>
+
+        <div>
+          <h3 className="text-xl font-semibold mb-2">Lista de Empréstimos</h3>
+          {emprestimos.length === 0 ? (
+            <p className="text-gray-500">Nenhum empréstimo encontrado.</p>
           ) : (
-            <ul>
-              {emprestimos.map((emprestimo) => (
-                <li key={emprestimo.id} className={styles.item}>
+            <ul className="space-y-2">
+              {emprestimos.map(e => (
+                <li key={e.id} className="border p-4 rounded shadow-sm flex justify-between items-start">
                   <div>
-                    Cliente ID: {emprestimo.clienteId} | Livro ID: {emprestimo.livroId}<br />
-                    Empréstimo: {new Date(emprestimo.dataEmprestimo).toLocaleDateString()} | 
-                    Devolução: {emprestimo.dataDevolucao ? new Date(emprestimo.dataDevolucao).toLocaleDateString() : 'N/A'}<br />
-                    Status: {emprestimo.status}
+                    <p><strong>Cliente:</strong> {e.clienteNome} | <strong>CPF:</strong> {e.clienteCpf}</p>
+                    <p><strong>Livro:</strong> {e.livroTitulo}</p>
+                    <p><strong>Empréstimo:</strong> {new Date(e.dataEmprestimo).toLocaleDateString()} | <strong>Devolução:</strong> {e.dataDevolucao ? new Date(e.dataDevolucao).toLocaleDateString() : 'N/A'}</p>
+                    <p><strong>Status:</strong> {e.status}</p>
                   </div>
-                  <div className={styles.actions}>
-                    <button onClick={() => handleEdit(emprestimo)}>Editar</button>
-                    <button onClick={() => handleDelete(emprestimo.id)} className={styles.deleteBtn}>
-                      Deletar
-                    </button>
+                  <div className="flex flex-col space-y-1">
+                    <button onClick={() => handleEdit(e)} className="bg-yellow-400 text-white px-2 py-1 rounded hover:bg-yellow-500">Editar</button>
+                    <button onClick={() => handleDelete(e.id)} className="bg-red-600 text-white px-2 py-1 rounded hover:bg-red-700">Deletar</button>
                   </div>
                 </li>
               ))}
@@ -285,14 +298,8 @@ const Emprestimos: React.FC = () => {
           )}
         </div>
 
-        {/* Mensagem de Feedback */}
         {message && (
-          <p 
-            className={styles.message} 
-            style={{ color: message.includes('sucesso') ? 'green' : 'red' }}
-          >
-            {message}
-          </p>
+          <p className={`mt-4 font-medium ${message.includes('sucesso') ? 'text-green-600' : 'text-red-600'}`}>{message}</p>
         )}
       </div>
     </div>
