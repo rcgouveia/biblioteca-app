@@ -4,7 +4,8 @@ import React, { useState, useEffect, FormEvent } from 'react';
 import axios, { AxiosError } from 'axios';
 import api from '../lib/api'; // Instância configurada do Axios
 import NavBar from '../components/NavBar/NavBar';
-import styles from './Livros.module.css'; // Crie um arquivo CSS similar para estilos
+import { TextField, Button, Alert, Box, Typography, Container, List, ListItem, ListItemText, IconButton, FormControlLabel, Checkbox } from '@mui/material';
+import { Book, Edit, Trash2, Plus } from 'lucide-react';
 
 // 1. Interface para o Livro (atualizada conforme o modelo Prisma)
 interface Livro {
@@ -12,7 +13,7 @@ interface Livro {
   titulo: string;
   descricao: string;
   genero: string;
-  status: boolean; // true = disponível, false = indisponível (assumindo)
+  status: boolean; // true = disponível, false = indisponível
   quantidade: number;
   createdAt: string; // DateTime como string (ISO)
   updatedAt: string; // DateTime como string (ISO)
@@ -91,11 +92,11 @@ const Livros: React.FC = () => {
 
     try {
       if (editingId) {
-        // Atualizar (PUT /livros/:id)
+        // Atualizar (PUT /livros/atualizar/:id) - Ajustado conforme seu código
         await api.put(`/livros/atualizar/${editingId}`, formData);
         setMessage('Livro atualizado com sucesso!');
       } else {
-        // Criar (POST /livros)
+        // Criar (POST /livros/criar) - Ajustado conforme seu código
         await api.post('/livros/criar', formData);
         setMessage('Livro criado com sucesso!');
       }
@@ -115,7 +116,7 @@ const Livros: React.FC = () => {
     }
   };
 
-  // 5. Deletar livro (DELETE /livros/:id)
+  // 5. Deletar livro (DELETE /livros/deletar/:id) - Ajustado conforme seu código
   const handleDelete = async (id: number) => {
     if (!window.confirm('Tem certeza que deseja deletar este livro?')) return;
 
@@ -151,111 +152,159 @@ const Livros: React.FC = () => {
   };
 
   return (
-    <div className='bg-black'>
+    <div className="bg-black min-h-screen">
       <NavBar />
-      <div className={styles.container}>
-        <h2>Gerenciamento de Livros</h2>
-
-        {/* Formulário para Criar/Editar */}
-        <form onSubmit={handleSubmit} className={styles.form}>
-          <h3>{editingId ? 'Editar Livro' : 'Criar Novo Livro'}</h3>
-
-          <label htmlFor="titulo">Título:</label>
-          <input
-            id="titulo"
-            type="text"
-            name="titulo"
-            value={formData.titulo}
-            onChange={handleChange}
-            required
-          />
-
-          <label htmlFor="descricao">Descrição:</label>
-          <textarea
-            id="descricao"
-            name="descricao"
-            value={formData.descricao}
-            onChange={handleChange}
-            required
-            rows={3} // Para uma área de texto maior
-          />
-
-          <label htmlFor="genero">Gênero:</label>
-          <input
-            id="genero"
-            type="text"
-            name="genero"
-            value={formData.genero}
-            onChange={handleChange}
-            required
-          />
-
-          <label htmlFor="status">Disponível:</label>
-          <input
-            id="status"
-            type="checkbox"
-            name="status"
-            checked={formData.status}
-            onChange={handleChange}
-          />
-
-          <label htmlFor="quantidade">Quantidade:</label>
-          <input
-            id="quantidade"
-            type="number"
-            name="quantidade"
-            value={formData.quantidade}
-            onChange={handleChange}
-            min="0"
-            required
-          />
-
-          <button type="submit" disabled={loading}>
-            {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
-          </button>
-          {editingId && (
-            <button type="button" onClick={handleCancelEdit} className={styles.cancelBtn}>
-              Cancelar
-            </button>
-          )}
-        </form>
-
-        {/* Lista de Livros - COM VERIFICAÇÃO PARA EVITAR .map() EM NÃO-ARRAYS */}
-        <div className={styles.list}>
-          <h3>Lista de Livros</h3>
-          {!Array.isArray(livros) || livros.length === 0 ? (
-            <p>{!Array.isArray(livros) ? 'Erro: Dados inválidos.' : 'Nenhum livro encontrado.'}</p>
-          ) : (
-            <ul>
-              {livros.map((livro) => (
-                <li key={livro.id} className={styles.item}>
-                  <div>
-                    <strong>{livro.titulo}</strong> - {livro.descricao} ({livro.genero})<br />
-                    Status: {livro.status ? 'Disponível' : 'Indisponível'} | Quantidade: {livro.quantidade}<br />
-                    Criado em: {new Date(livro.createdAt).toLocaleDateString()} | Atualizado em: {new Date(livro.updatedAt).toLocaleDateString()}
-                  </div>
-                  <div className={styles.actions}>
-                    <button onClick={() => handleEdit(livro)}>Editar</button>
-                    <button onClick={() => handleDelete(livro.id)} className={styles.deleteBtn}>
-                      Deletar
-                    </button>
-                  </div>
-                </li>
-              ))}
-            </ul>
-          )}
+      
+      <div className="mt-10">
+        <div className="flex justify-center text-white font-bold font-serif text-5xl">
+          Gerenciamento de Livros
         </div>
+        <div className="flex justify-center text-orange-300 font-bold font-serif text-5xl mb-10">
+          Biblioteca
+        </div>
+      </div>
+
+      <Container maxWidth="md" className="mt-10">
+        {/* Formulário para Criar/Editar */}
+        <Box className="bg-neutral-800 p-8 rounded-lg shadow-lg mb-10">
+          <Typography variant="h5" className="text-center text-white mb-6 font-serif flex justify-center items-center gap-2">
+            <Book className="text-orange-300" size={28} />
+            {editingId ? 'Editar Livro' : 'Criar Novo Livro'}
+          </Typography>
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <TextField
+              fullWidth
+              label="Título"
+              name="titulo"
+              value={formData.titulo}
+              onChange={handleChange}
+              required
+              variant="outlined"
+              sx={{ input: { color: 'white' }, label: { color: 'white' } }}
+              className="bg-neutral-700"
+            />
+            <TextField
+              fullWidth
+              label="Descrição"
+              name="descricao"
+              value={formData.descricao}
+              onChange={handleChange}
+              required
+              multiline
+              rows={3}
+              variant="outlined"
+              sx={{ input: { color: 'white' }, label: { color: 'white' } }}
+              className="bg-neutral-700"
+            />
+            <TextField
+              fullWidth
+              label="Gênero"
+              name="genero"
+              value={formData.genero}
+              onChange={handleChange}
+              required
+              variant="outlined"
+              sx={{ input: { color: 'white' }, label: { color: 'white' } }}
+              className="bg-neutral-700"
+            />
+            <FormControlLabel
+              control={<Checkbox checked={formData.status} onChange={handleChange} name="status" />}
+              label="Disponível"
+              sx={{ color: 'white' }}
+            />
+            <TextField
+              fullWidth
+              label="Quantidade"
+              name="quantidade"
+              type="number"
+              value={formData.quantidade}
+              onChange={handleChange}
+              required
+              variant="outlined"
+              sx={{ input: { color: 'white' }, label: { color: 'white' } }}
+              className="bg-neutral-700"
+            />
+            <div className="flex justify-center gap-5 mt-10">
+              <Button
+                type="submit"
+                disabled={loading}
+                className="px-8 py-4 bg-green-900 text-white rounded-lg font-display text-lg hover:bg-green-900/90 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+              >
+                <Plus size={20} />
+                {loading ? 'Salvando...' : editingId ? 'Atualizar' : 'Criar'}
+              </Button>
+              {editingId && (
+                <Button
+                  onClick={handleCancelEdit}
+                  className="px-8 py-4 bg-orange-500 text-white rounded-lg font-display text-lg hover:bg-orange-400/70 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center justify-center gap-2"
+                >
+                  Cancelar
+                </Button>
+              )}
+            </div>
+          </form>
+        </Box>
+
+        {/* Lista de Livros */}
+        <Box className="bg-neutral-800 p-8 rounded-lg shadow-lg mb-10">
+          <Typography variant="h5" className="text-center text-white mb-6 font-serif flex justify-center items-center gap-2">
+            <Book className="text-orange-300" size={28} />
+            Lista de Livros
+          </Typography>
+          {!Array.isArray(livros) || livros.length === 0 ? (
+            <Typography className="text-center text-neutral-400 text-lg">
+              {!Array.isArray(livros) ? 'Erro: Dados inválidos.' : 'Nenhum livro encontrado.'}
+            </Typography>
+          ) : (
+            <List className="space-y-4">
+              {livros.map((livro) => (
+                <ListItem key={livro.id} className="bg-neutral-700 rounded-lg p-6 shadow-md hover:shadow-lg transition-all duration-300">
+                  <ListItemText
+                    primary={
+                      <Typography variant="h6" className="text-white font-bold">
+                        {livro.titulo}
+                      </Typography>
+                    }
+                    secondary={
+                      <Typography className="text-neutral-300">
+                        {livro.descricao} ({livro.genero})<br />
+                        Status: {livro.status ? 'Disponível' : 'Indisponível'} | Quantidade: {livro.quantidade}<br />
+                        Criado em: {new Date(livro.createdAt).toLocaleDateString()} | Atualizado em: {new Date(livro.updatedAt).toLocaleDateString()}
+                      </Typography>
+                    }
+                  />
+                  <Box className="flex gap-3">
+                    <Button
+                      onClick={() => handleEdit(livro)}
+                      className="px-6 py-2 bg-orange-500 text-white rounded-lg font-display text-sm hover:bg-orange-400/70 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
+                    >
+                      <Edit size={16} />
+                      Editar
+                    </Button>
+                    <Button
+                      onClick={() => handleDelete(livro.id)}
+                      className="px-6 py-2 bg-red-600 text-white rounded-lg font-display text-sm hover:bg-red-700/90 transition-all duration-300 shadow-lg hover:shadow-xl hover:-translate-y-0.5 flex items-center gap-2"
+                    >
+                      <Trash2 size={16} />
+                      Deletar
+                    </Button>
+                  </Box>
+                </ListItem>
+              ))}
+            </List>
+          )}
+        </Box>
 
         {/* Mensagem de Feedback */}
         {message && (
-          <p 
-            className={styles.message} 
-            style={{ color: message.includes('sucesso') ? 'green' : 'red' }}
+          <Alert
+            severity={message.includes('sucesso') ? 'success' : 'error'}
+            className="mt-4 text-center"
           >
             {message}
-          </p>
+          </Alert>
         )}
-      </div>
+      </Container>
     </div>
   );
 };
